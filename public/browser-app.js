@@ -1,70 +1,77 @@
-const formDOM = document.querySelector('.form')
-const usernameInputDOM = document.querySelector('.username-input')
-const passwordInputDOM = document.querySelector('.password-input')
-const formAlertDOM = document.querySelector('.form-alert')
-const resultDOM = document.querySelector('.result')
-const btnDOM = document.querySelector('#data')
-const tokenDOM = document.querySelector('.token')
+const url = '/api/v1/products'
+const fileFormDOM = document.querySelector('.file-form')
 
-formDOM.addEventListener('submit', async (e) => {
-  formAlertDOM.classList.remove('text-success')
-  tokenDOM.classList.remove('text-success')
+const nameInputDOM = document.querySelector('#name')
+const priceInputDOM = document.querySelector('#price')
+const imageInputDOM = document.querySelector('#image')
 
-  e.preventDefault()
-  const username = usernameInputDOM.value
-  const password = passwordInputDOM.value
+const containerDOM = document.querySelector('.container')
+let imageValue;
 
-  try {
-    const { data } = await axios.post('/api/v1/login', { username, password })
+// imageInputDOM.addEventListener('change',(e)=>{
+//  const file = e.target.files[0];
+//  console.log(file);
+// })
 
-    formAlertDOM.style.display = 'block'
-    formAlertDOM.textContent = data.msg
 
-    formAlertDOM.classList.add('text-success')
-    usernameInputDOM.value = ''
-    passwordInputDOM.value = ''
 
-    localStorage.setItem('token', data.token)
-    resultDOM.innerHTML = ''
-    tokenDOM.textContent = 'token present'
-    tokenDOM.classList.add('text-success')
-  } catch (error) {
-    formAlertDOM.style.display = 'block'
-    formAlertDOM.textContent = error.response.data.msg
-    localStorage.removeItem('token')
-    resultDOM.innerHTML = ''
-    tokenDOM.textContent = 'no token present'
-    tokenDOM.classList.remove('text-success')
-  }
-  setTimeout(() => {
-    formAlertDOM.style.display = 'none'
-  }, 2000)
+
+
+
+
+imageInputDOM.addEventListener('change',async (e)=>{
+ const imageFile = e.target.files[0];
+ const formData = new FormData();
+ formData.append('image',imageFile)
+ try {
+  const {data:{image:{src}}} = await axios.post(`${url}/uploads`,formData,{
+   headers:{
+    'Content-Type':'multipart/form-data'
+   }
+  })
+  imageValue = src
+ } catch (error) {
+   imageValue = null
+  console.log(error);
+ }
 })
 
-btnDOM.addEventListener('click', async () => {
-  const token = localStorage.getItem('token')
-  try {
-    const { data } = await axios.get('/api/v1/dashboard', {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-    resultDOM.innerHTML = `<h5>${data.msg}</h5><p>${data.secret}</p>`
 
-    data.secret
-  } catch (error) {
-    localStorage.removeItem('token')
-    resultDOM.innerHTML = `<p>${error.response.data.msg}</p>`
-  }
-})
-
-const checkToken = () => {
-  tokenDOM.classList.remove('text-success')
-
-  const token = localStorage.getItem('token')
-  if (token) {
-    tokenDOM.textContent = 'token present'
-    tokenDOM.classList.add('text-success')
-  }
+fileFormDOM.addEventListener('submit',async (e)=>{
+e.preventDefault()
+const nameValue = nameInputDOM.value;
+const priceValue = priceInputDOM.value;
+try {
+ 
+ const product = {name:nameValue,price:priceValue,image:imageValue}
+ 
+  await axios.post(url,product);
+  fetchProducts()
+} catch (error) {
+ console.log(error);
 }
-checkToken()
+})
+
+
+
+async function fetchProducts () {
+ try {
+  const {data:{products}} = await axios.get(url);
+  
+  const productsDOM = products.map((product)=>{
+return `<article class="product">
+<img src="${product.image}" alt="${product.name}" class="img"/>
+<footer>
+<p>${product.name}</p>
+<span>$${product.price}</span>
+</footer>
+</article>`
+  }).join('')
+  containerDOM.innerHTML = productsDOM
+ } catch (error) {
+  console.log(error);
+ }
+ 
+}
+
+fetchProducts()
